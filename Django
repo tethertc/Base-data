@@ -1,0 +1,19 @@
+import subprocess
+
+# ⚠️ Замени на свой URL репозитория:
+REPO_URL = "https://github.com/<твой_ник>/<имя_репозитория>.git"
+
+commands = [
+    "git init",
+    "git add .",
+    'git commit -m "Первый коммит: Django"',
+    "git branch -M main",
+    f"git remote add origin {REPO_URL}",
+    "git push -u origin main"
+]
+
+for cmd in commands:
+    print(f"→ {cmd}")
+    subprocess.run(cmd, shell=True, check=True)
+
+print("\n✅ Готово: проект запушен на GitHub.")

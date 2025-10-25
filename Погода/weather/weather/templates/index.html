@@ -1,0 +1,295 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Прогноз погоды - Flask</title>
+    <style>
+        /* Базовые стили */
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #121212; /* общий фон */
+            margin: 0;
+            padding: 40px 20px;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #bbdefb;
+            text-shadow: none;
+            margin-bottom: 20px;
+            font-weight: 700;
+            font-size: 2.5rem;
+        }
+
+        /* Навигация и приветствие */
+        .header-controls {
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .auth-links a {
+            color: #90caf9;
+            margin-left: 15px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+        .auth-links a:hover {
+            color: #42a5f5;
+        }
+
+        /* Flash-сообщения */
+        .flash {
+            max-width: 900px;
+            width: 100%;
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: 600;
+        }
+        .flash.error { background-color: #311a1a; color: #ef9a9a; }
+        .flash.success { background-color: #1b3a26; color: #a5d6a7; }
+        .flash.info { background-color: #1a2735; color: #90caf9; }
+
+        /* Форма */
+        form {
+            display: flex;
+            gap: 15px;
+            max-width: 480px;
+            width: 100%;
+            margin-bottom: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        input[type="text"] {
+            flex: 1 1 220px;
+            padding: 12px 18px;
+            font-size: 1rem;
+            border-radius: 8px;
+            border: 1px solid #424242;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        input[type="text"]:focus {
+            border-color: #64b5f6;
+            box-shadow: 0 0 0 3px rgba(100, 181, 246, 0.2);
+        }
+
+        /* Кнопки */
+        button {
+            flex: 0 0 120px;
+            padding: 12px 0;
+            font-size: 1rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            background-color: #1565c0;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            user-select: none;
+        }
+        button:hover {
+            background-color: #1976d2;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+        }
+        .selected-btn {
+            background-color: #0d47a1 !important;
+            box-shadow: 0 4px 10px rgba(33,150,243,0.3) !important;
+        }
+
+        /* Ошибки */
+        .error-message {
+            max-width: 420px;
+            width: 100%;
+            background-color: #2b1a1a;
+            color: #ef9a9a;
+            border-radius: 10px;
+            padding: 14px 20px;
+            box-shadow: 0 0 8px rgba(239, 154, 154, 0.1);
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        /* Контейнер и карточки */
+        .weather-container {
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+        .day-card {
+            background: #1e1e1e;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+            padding: 25px 20px;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            transition: box-shadow 0.3s ease;
+            cursor: default;
+            display: flex;
+            flex-direction: column;
+        }
+        .day-card:hover {
+            box-shadow: 0 8px 20px rgba(0,0,0,0.8);
+        }
+
+        .day-summary {
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
+        }
+        .date {
+            font-weight: 700;
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+            color: #bbdefb;
+        }
+        .day-label {
+            font-size: 0.9em;
+            font-weight: 500;
+            color: #90caf9;
+        }
+        .temp {
+            font-size: 1.1rem;
+            margin: 3px 0;
+            color: #e0e0e0;
+        }
+        .description {
+            color: #90a4ae;
+            font-size: 1rem;
+        }
+
+        /* Почасовой прогноз */
+        .hourly-forecast {
+            text-align: left;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        .hourly-item {
+            padding: 8px 5px;
+            border-bottom: 1px dashed #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .hourly-time {
+            font-weight: 700;
+            color: #90caf9;
+            flex-basis: 15%;
+        }
+        .hourly-temp {
+            font-weight: 600;
+            color: #e0e0e0;
+            flex-basis: 15%;
+            text-align: right;
+        }
+        .hourly-humidity {
+            color: #b0bec5;
+        }
+
+        /* Мобильная адаптивность */
+        @media (max-width: 480px) {
+            body { padding: 30px 10px; }
+            form { gap: 10px; }
+            button { flex: 1 1 45%; font-size: 1rem; }
+            .day-card { max-width: 100%; }
+            .hourly-humidity { display: none; }
+            .hourly-desc { flex-basis: 40%; }
+            .hourly-time, .hourly-temp { flex-basis: 20%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-controls">
+        {% if current_user.is_authenticated %}
+            <span>Привет, <strong>{{ current_user.username }}</strong>!</span>
+            <div class="auth-links">
+                <a href="{{ url_for('logout') }}">Выйти</a>
+            </div>
+        {% else %}
+            <span>Гость</span>
+            <div class="auth-links">
+                <a href="{{ url_for('login') }}">Войти</a>
+                <a href="{{ url_for('register') }}">Регистрация</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <h1>Прогноз погоды</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="post">
+        <input type="text" name="city" placeholder="Введите название города" required value="{{ city or '' }}" />
+        <button type="submit" name="days" value="1" class="{% if selected_days == 1 %}selected-btn{% endif %}">На 1 день</button>
+        <button type="submit" name="days" value="5" class="{% if selected_days == 5 %}selected-btn{% endif %}">На 5 дней</button>
+    </form>
+
+    {% if error %}
+        <div class="error-message">{{ error }}</div>
+    {% endif %}
+
+    {% if weather %}
+        <div class="weather-container">
+            {% for day in weather %}
+                <div class="day-card" title="Прогноз на {{ day.date }}">
+                    <div class="day-summary">
+                        <div>
+                            <div class="date">
+                                <strong>{{ day.date }}</strong>
+                                {% if day.day_label %}
+                                    <span class="day-label">{{ day.day_label }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="temp"><strong>Макс: {{ day.temp_max }}°C</strong></div>
+                            <div class="temp">Мин: {{ day.temp_min }}°C</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <img src="http://openweathermap.org/img/wn/{{ day.main_icon }}@2x.png" alt="{{ day.main_description }}" />
+                            <div class="description">{{ day.main_description }}</div>
+                        </div>
+                    </div>
+
+                    <div class="hourly-forecast">
+                        <p style="font-weight: 700; color: #b0bec5; margin-bottom: 5px;">Почасовой прогноз (каждые 3 часа):</p>
+                        {% for hour in day.hourly_details %}
+                            <div class="hourly-item">
+                                <span class="hourly-time">{{ hour.time }}</span>
+                                <img src="http://openweathermap.org/img/wn/{{ hour.icon }}.png" alt="{{ hour.description }}" title="{{ hour.description }}" />
+                                <span class="hourly-desc">{{ hour.description }}</span>
+                                <span class="hourly-humidity">{{ hour.humidity }}%</span>
+                                <span class="hourly-temp">{{ hour.temp }}°C</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</body>
+</html>
